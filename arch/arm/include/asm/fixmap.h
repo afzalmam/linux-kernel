@@ -59,6 +59,12 @@ void __init early_fixmap_init(void);
 
 #else
 
+#define set_fixmap(idx, phys)
+#define clear_fixmap(idx)
+
+#define __fix_to_virt(x)	(x)
+#define __virt_to_fix(x)	(x)
+
 static inline void early_fixmap_init(void) { }
 
 #endif
