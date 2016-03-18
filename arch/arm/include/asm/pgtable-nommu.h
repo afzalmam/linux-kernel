@@ -35,6 +35,11 @@
 
 #define PGDIR_SIZE		(1UL << PGDIR_SHIFT)
 #define PGDIR_MASK		(~(PGDIR_SIZE-1))
+
+#define SECTION_SHIFT           20
+#define SECTION_SIZE            (1UL << SECTION_SHIFT)
+#define SECTION_MASK            (~(SECTION_SIZE-1))
+
 /* FIXME */
 
 #define PAGE_NONE	__pgprot(0)
