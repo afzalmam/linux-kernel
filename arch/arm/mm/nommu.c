@@ -19,6 +19,7 @@
 #include <asm/cputype.h>
 #include <asm/mpu.h>
 #include <asm/procinfo.h>
+#include <asm/mach/map.h>
 
 #include "mm.h"
 
@@ -401,3 +402,37 @@ void iounmap(volatile void __iomem *addr)
 {
 }
 EXPORT_SYMBOL(iounmap);
+
+void __iomem *
+__arm_ioremap_exec(phys_addr_t phys_addr, size_t size, bool cached)
+{
+	unsigned int mtype;
+
+	if (cached)
+		mtype = MT_MEMORY_RWX;
+	else
+		mtype = MT_MEMORY_RWX_NONCACHED;
+
+	return __arm_ioremap_caller(phys_addr, size, mtype,
+			__builtin_return_address(0));
+}
+
+#ifdef CONFIG_PCI
+static int pci_ioremap_mem_type = MT_DEVICE;
+
+void pci_ioremap_set_mem_type(int mem_type)
+{
+	pci_ioremap_mem_type = mem_type;
+}
+
+int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr)
+{
+	BUG_ON(offset + SZ_64K > IO_SPACE_LIMIT);
+
+	return ioremap_page_range(PCI_IO_VIRT_BASE + offset,
+				  PCI_IO_VIRT_BASE + offset + SZ_64K,
+				  phys_addr,
+				  MT_DEVICE);
+}
+EXPORT_SYMBOL_GPL(pci_ioremap_io);
+#endif
