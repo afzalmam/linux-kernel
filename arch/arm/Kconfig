@@ -327,9 +327,9 @@ choice
 
 config ARCH_MULTIPLATFORM
 	bool "Allow multiple platforms to be selected"
-	depends on MMU
+	depends on MMU || EXPERT
 	select ARM_HAS_SG_CHAIN
-	select ARM_PATCH_PHYS_VIRT
+	select ARM_PATCH_PHYS_VIRT if MMU
 	select AUTO_ZRELADDR
 	select CLKSRC_OF
 	select COMMON_CLK
@@ -339,6 +339,23 @@ config ARCH_MULTIPLATFORM
 	select PCI_DOMAINS if PCI
 	select SPARSE_IRQ
 	select USE_OF
+	help
+	  Please, read carefully if you've selected CONFIG_MMU=n!
+
+	  Multiplatform with !MMU configuration *is not* meant that
+	  kernel built to support every platform will boot on them. It
+	  is because physical address space layouts (particularly where
+	  RAM is located) are different between platforms and there is
+	  no MMU to work that around.
+
+	  You must specify where RAM start (via DRAM_BASE config
+	  option) and appropriate size of RAM (via DRAM_SIZE config
+	  option) which are valid for the platform you are building
+	  for.
+
+	  This feature is *EXPERIMENTAL*, please, consider building
+	  with CONFIG_MMU=y unless you know what you do or want to
+	  help with testing.
 
 config ARM_SINGLE_ARMV7M
 	bool "ARMv7-M based platforms (Cortex-M0/M3/M4)"
