@@ -641,7 +641,7 @@ static inline void update_mmu_cache(struct vm_area_struct *vma,
 
 #endif
 
-#elif defined(CONFIG_SMP)	/* !CONFIG_MMU */
+#else /* !CONFIG_MMU */
 
 #ifndef __ASSEMBLY__
 
