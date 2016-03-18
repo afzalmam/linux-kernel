@@ -9,6 +9,8 @@
 #include <linux/ioport.h>
 #include <linux/io.h>
 
+#include <asm/outercache.h>
+
 unsigned long vga_base;
 EXPORT_SYMBOL(vga_base);
 
@@ -39,4 +41,19 @@ void pci_iounmap(struct pci_dev *dev, void __iomem *addr)
 		iounmap(addr);
 }
 EXPORT_SYMBOL(pci_iounmap);
+#endif
+
+#ifdef CONFIG_ARM_HEAVY_MB
+void (*soc_mb)(void);
+
+void arm_heavy_mb(void)
+{
+#ifdef CONFIG_OUTER_CACHE_SYNC
+	if (outer_cache.sync)
+		outer_cache.sync();
+#endif
+	if (soc_mb)
+		soc_mb();
+}
+EXPORT_SYMBOL(arm_heavy_mb);
 #endif
