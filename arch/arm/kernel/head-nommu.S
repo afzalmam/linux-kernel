@@ -13,6 +13,7 @@
  */
 #include <linux/linkage.h>
 #include <linux/init.h>
+#include <linux/errno.h>
 
 #include <asm/assembler.h>
 #include <asm/ptrace.h>
@@ -112,6 +113,8 @@ ENTRY(secondary_startup)
 	/* Use MPU region info supplied by __cpu_up */
 	ldr	r6, [r7]			@ get secondary_data.mpu_szr
 	bl      __setup_mpu			@ Initialize the MPU
+	teq	r0, #0
+	bne     __error_p
 #endif
 
 	badr	lr, 1f				@ return (PIC) address
@@ -201,7 +204,8 @@ ENDPROC(__after_proc_init)
  * Region 3: Normal, shared, inaccessible from PL0 to protect the vectors page
  *
  * r6: Value to be written to DRSR (and IRSR if required) for MPU_RAM_REGION
-*/
+ * r0: non zero value indicates error
+ */
 
 ENTRY(__setup_mpu)
 
@@ -209,13 +213,13 @@ ENTRY(__setup_mpu)
 	mrc	p15, 0, r0, c0, c1, 4		@ Read ID_MMFR0
 	and	r0, r0, #(MMFR0_PMSA)		@ PMSA field
 	teq	r0, #(MMFR0_PMSAv7)		@ PMSA v7
-	bne	__error_p			@ Fail: ARM_MPU on NOT v7 PMSA
+	bne	__nompu
 
 	/* Determine whether the D/I-side memory map is unified. We set the
 	 * flags here and continue to use them for the rest of this function */
 	mrc	p15, 0, r0, c0, c0, 4		@ MPUIR
 	ands	r5, r0, #MPUIR_DREGION_SZMASK	@ 0 size d region => No MPU
-	beq	__error_p			@ Fail: ARM_MPU and no MPU
+	beq	__nompu
 	tst	r0, #MPUIR_nU			@ MPUIR_nU = 0 for unified
 
 	/* Setup second region first to free up r6 */
@@ -263,6 +267,11 @@ ENTRY(__setup_mpu)
 	orr	r0, r0, #CR_M			@ Set SCTRL.M (MPU on)
 	mcr	p15, 0, r0, c1, c0, 0		@ Enable MPU
 	isb
+
+	mov	r0, #0
+	ret	lr
+__nompu:
+	mov	r0, #-ENODEV
 	ret	lr
 ENDPROC(__setup_mpu)
 #endif
