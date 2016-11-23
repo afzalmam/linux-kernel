@@ -717,9 +717,9 @@ static void __init setup_processor(void)
 #endif
 #ifdef CONFIG_MMU
 	init_default_cache_policy(list->__cpu_mm_mmu_flags);
-#endif
-	erratum_a15_798181_init();
 
+	erratum_a15_798181_init();
+#endif
 	elf_hwcap_fixup();
 
 	cacheid_init();
