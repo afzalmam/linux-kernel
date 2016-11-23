@@ -89,6 +89,12 @@ ENDPROC(stext)
 
 #ifdef CONFIG_SMP
 	.text
+	.arm
+ENTRY(secondary_startup_arm)
+	THUMB(	badr	r9, 1f		)	@ Kernel is entered in ARM.
+	THUMB(	bx	r9		)	@ If this is a Thumb-2 kernel,
+	THUMB(	.thumb			)	@ switch to Thumb now.
+	THUMB(1:			)
 ENTRY(secondary_startup)
 	/*
 	 * Common entry point for secondary CPUs.
@@ -126,6 +132,7 @@ ENTRY(secondary_startup)
 	mov	fp, #0
 	b	secondary_start_kernel
 ENDPROC(secondary_startup)
+ENDPROC(secondary_startup_arm)
 
 	.type	__secondary_data, %object
 __secondary_data:
