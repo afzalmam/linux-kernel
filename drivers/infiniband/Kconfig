@@ -4,6 +4,7 @@ menuconfig INFINIBAND
 	depends on HAS_IOMEM
 	depends on NET
 	depends on INET
+	depends on MMU
 	depends on m || IPV6 != m
 	select IRQ_POLL
 	---help---
