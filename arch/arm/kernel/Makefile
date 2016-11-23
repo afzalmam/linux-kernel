@@ -84,6 +84,11 @@ endif
 obj-$(CONFIG_PARAVIRT)	+= paravirt.o
 
 head-y			:= head$(MMUEXT).o
+ifeq ($(CONFIG_CPU_V7M),y)
+AFLAGS_head-nommu.o     :=-Wa,-march=armv7-m
+else
+AFLAGS_head-nommu.o     :=-Wa,-march=armv7-a
+endif
 obj-$(CONFIG_DEBUG_LL)	+= debug.o
 obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
 
