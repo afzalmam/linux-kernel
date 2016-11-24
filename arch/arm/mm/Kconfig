@@ -290,6 +290,7 @@ config CPU_SA1100
 	select CPU_ABRT_EV4
 	select CPU_CACHE_V4WB
 	select CPU_CACHE_VIVT
+	select CPU_COPY_V4MC if MMU
 	select CPU_CP15_MMU
 	select CPU_PABRT_LEGACY
 	select CPU_TLB_V4WB if MMU
@@ -524,6 +525,9 @@ config CPU_CACHE_V7M
 
 if MMU
 # The copy-page model
+config CPU_COPY_V4MC
+	bool
+
 config CPU_COPY_V4WT
 	bool
 
