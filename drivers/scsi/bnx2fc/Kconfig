@@ -1,5 +1,6 @@
 config SCSI_BNX2X_FCOE
 	tristate "QLogic FCoE offload support"
+	depends on MMU
 	depends on PCI
 	depends on (IPV6 || IPV6=n)
 	depends on LIBFC
