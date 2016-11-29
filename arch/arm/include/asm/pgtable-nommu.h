@@ -113,6 +113,7 @@ extern unsigned int kobjsize(const void *objp);
 #define v4wt_user_fns	(0)
 #define v6_user_fns	(0)
 #define xscale_mc_user_fns (0)
+#define feroceon_user_fns (0)
 
 #endif /*__ASSEMBLY__*/
 
