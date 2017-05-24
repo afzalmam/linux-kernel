@@ -289,7 +289,8 @@ __v7_ca17mp_setup:
 	mrc	p15, 0, r0, c1, c0, 1
 	orr	r10, r10, #(1 << 6)		@ Enable SMP/nAMP mode
 	orr	r10, r10, r0			@ Set required bits
-	mcr	p15, 0, r10, c1, c0, 1		@ No, update register
+	teq	r10, r0				@ Were they already set?
+	mcrne	p15, 0, r10, c1, c0, 1		@ No, update register
 	b	__v7_setup_cont
 
 /*
