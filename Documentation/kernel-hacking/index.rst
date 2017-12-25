@@ -7,3 +7,4 @@ Kernel Hacking Guides
 
    hacking
    locking
+   memory-barriers
