@@ -2,10 +2,10 @@
 Linux kernel memory barriers
 ============================
 
-:Author: David Howells <dhowells@redhat.com>,
-         Paul E. McKenney <paulmck@linux.vnet.ibm.com>,
-         Will Deacon <will.deacon@arm.com>,
-         Peter Zijlstra <peterz@infradead.org>
+:Authors: David Howells <dhowells@redhat.com>,
+          Paul E. McKenney <paulmck@linux.vnet.ibm.com>,
+          Will Deacon <will.deacon@arm.com>,
+          Peter Zijlstra <peterz@infradead.org>
 
 Disclaimer
 ==========
@@ -303,7 +303,7 @@ Varieties of memory barrier
 
 Memory barriers come in four basic varieties:
 
-1. Write (or store) memory barriers
+#. Write (or store) memory barriers
 
    A write memory barrier gives a guarantee that all the STORE operations
    specified before the barrier will appear to happen before all the STORE
@@ -323,7 +323,7 @@ Memory barriers come in four basic varieties:
            dependency barriers; see :ref:`smp-barrier-pairing`.
 
 
-2. Data dependency barriers
+#. Data dependency barriers
 
    A data dependency barrier is a weaker form of read barrier.  In the case
    where two loads are performed such that the second depends on the result
@@ -363,7 +363,7 @@ Memory barriers come in four basic varieties:
        barriers; see :ref:`smp-barrier-pairing`.
 
 
-3. Read (or load) memory barriers
+#. Read (or load) memory barriers
 
    A read barrier is a data dependency barrier plus a guarantee that all the
    LOAD operations specified before the barrier will appear to happen before
@@ -382,7 +382,7 @@ Memory barriers come in four basic varieties:
        :ref:`smp-barrier-pairing`.
 
 
-4. General memory barriers
+#. General memory barriers
 
    A general memory barrier gives a guarantee that all the LOAD and STORE
    operations specified before the barrier will appear to happen before all
@@ -397,7 +397,7 @@ Memory barriers come in four basic varieties:
 
 And a couple of implicit varieties:
 
-5. ACQUIRE operations
+#. ACQUIRE operations
 
    This acts as a one-way permeable barrier.  It guarantees that all memory
    operations after the ACQUIRE operation will appear to happen after the
@@ -413,7 +413,7 @@ And a couple of implicit varieties:
    operation.
 
 
-6. RELEASE operations
+#. RELEASE operations
 
    This also acts as a one-way permeable barrier.  It guarantees that all
    memory operations before the RELEASE operation will appear to happen
@@ -469,8 +469,8 @@ There are certain things that the Linux kernel memory barriers do not guarantee:
   of the first CPU's accesses occur, but see the next point:
 
 * There is no guarantee that a CPU will see the correct order of effects
-  from a second CPU's accesses, even _if_ the second CPU uses a memory
-  barrier, unless the first CPU _also_ uses a matching memory barrier (see
+  from a second CPU's accesses, even **if** the second CPU uses a memory
+  barrier, unless the first CPU **also** uses a matching memory barrier (see
   :ref:`smp-barrier-pairing`).
 
 * There is no guarantee that some intervening piece of off-the-CPU
@@ -478,7 +478,7 @@ There are certain things that the Linux kernel memory barriers do not guarantee:
   cache coherency mechanisms should propagate the indirect effects of a memory
   barrier between CPUs, but might not do so in order.
 
-  .. [#]    For bus mastering DMA and coherency details, please read,
+  .. [#]    For bus mastering DMA and coherency details, please read
             ``Documentation/PCI/pci.txt``, ``Documentation/DMA-API-HOWTO.txt``,
 	    and ``Documentation/DMA-API.txt``
 
@@ -546,7 +546,7 @@ A data-dependency barrier is not required to order dependent writes
 because the CPUs that the Linux kernel supports don't do writes
 until they are certain (1) that the write will actually happen, (2)
 of the location of the write, and (3) of the value to be written.
-But please carefully read the "CONTROL DEPENDENCIES" section and the
+But please carefully read :ref:`control-dependencies` section and the
 Documentation/RCU/rcu_dereference.txt file:  The compiler can and does
 break dependencies in a great many highly creative ways.
 
@@ -585,7 +585,7 @@ for example.  See ``rcu_assign_pointer()`` and ``rcu_dereference()`` in
 pointer to be replaced with a new modified target, without the replacement
 target appearing to be incompletely initialised.
 
-See also the subsection on "Cache Coherency" for a more thorough example.`
+See also :ref:`cache-coherency` for a more thorough example.`
 
 
 .. _control-dependencies:
@@ -799,8 +799,7 @@ invoked by those two clauses), not to code following that if-statement.
 
 
 Note well that the ordering provided by a control dependency is local
-to the CPU containing it.  See the section on "Multicopy atomicity"
-for more information.
+to the CPU containing it.  See :ref:`multicopy-atomicity` for more information.
 
 
 In summary:
@@ -831,7 +830,7 @@ In summary:
 * Control dependencies require that the compiler avoid reordering the
   dependency into nonexistence.  Careful use of ``READ_ONCE()`` or
   ``atomic{,64}_read()`` can help to preserve your control dependency.
-  Please see the COMPILER BARRIER section for more information.
+  Please see :ref:`compiler-barrier` section for more information.
 
 * Control dependencies apply only to the then-clause and else-clause
   of the if-statement containing the control dependency, including
@@ -1282,6 +1281,7 @@ the speculation will be cancelled and the value reloaded::
 	and an updated value is                 +-------+       |       |
 	retrieved                               :       :       +-------+
 
+.. _multicopy-atomicity:
 
 Multicopy atomicity
 --------------------
@@ -1753,9 +1753,7 @@ which may then reorder things however it wishes.
 CPU memory barriers
 -------------------
 
-The Linux kernel has eight basic CPU memory barriers:
-
-::
+The Linux kernel has eight basic CPU memory barriers::
 
 	TYPE		MANDATORY		SMP CONDITIONAL
 	===============	=======================	===========================
@@ -1769,23 +1767,25 @@ All memory barriers except the data dependency barriers imply a compiler
 barrier.  Data dependencies do not impose any additional compiler ordering.
 
 Aside: In the case of data dependencies, the compiler would be expected
-to issue the loads in the correct order (eg. `a[b]` would have to load
-the value of b before loading a[b]), however there is no guarantee in
-the C specification that the compiler may not speculate the value of b
-(eg. is equal to 1) and load a before b (eg. tmp = a[1]; if (b != 1)
-tmp = a[b]; ).  There is also the problem of a compiler reloading b after
-having loaded a[b], thus having a newer copy of b than a[b].  A consensus
-has not yet been reached about these problems, however the READ_ONCE()
-macro is a good place to start looking.
+to issue the loads in the correct order (eg. ``a[b]`` would have to load
+the value of ``b`` before loading ``a[b]``), however there is no guarantee in
+the C specification that the compiler may not speculate the value of ``b``
+(eg. is equal to 1) and load ``a`` before ``b`` (eg. ``tmp = a[1]; if (b != 1)
+tmp = a[b];``).  There is also the problem of a compiler reloading ``b`` after
+having loaded ``a[b]``, thus having a newer copy of ``b`` than ``a[b]``.  A
+consensus has not yet been reached about these problems, however the
+``READ_ONCE()`` macro is a good place to start looking.
 
 SMP memory barriers are reduced to compiler barriers on uniprocessor compiled
 systems because it is assumed that a CPU will appear to be self-consistent,
 and will order overlapping accesses correctly with respect to itself.
-However, see the subsection on "Virtual Machine Guests" below.
+However, see :ref:`virtual-machine-guests`.
 
-[!] Note that SMP memory barriers _must_ be used to control the ordering of
-references to shared memory on SMP systems, though the use of locking instead
-is sufficient.
+.. note::
+
+    SMP memory barriers **must** be used to control the ordering of references
+    to shared memory on SMP systems, though the use of locking instead is
+    sufficient.
 
 Mandatory barriers should not be used to control SMP effects, since mandatory
 barriers impose unnecessary overhead on both SMP and UP systems. They may,
@@ -1797,51 +1797,47 @@ compiler and the CPU from reordering them.
 
 There are some more advanced barrier functions:
 
- (*) smp_store_mb(var, value)
+* smp_store_mb(var, value)
 
-     This assigns the value to the variable and then inserts a full memory
-     barrier after it.  It isn't guaranteed to insert anything more than a
-     compiler barrier in a UP compilation.
+  This assigns the value to the variable and then inserts a full memory
+  barrier after it.  It isn't guaranteed to insert anything more than a
+  compiler barrier in a UP compilation.
 
 
- (*) smp_mb__before_atomic();
- (*) smp_mb__after_atomic();
+* smp_mb__before_atomic();
+* smp_mb__after_atomic();
 
-     These are for use with atomic (such as add, subtract, increment and
-     decrement) functions that don't return a value, especially when used for
-     reference counting.  These functions do not imply memory barriers.
+  These are for use with atomic (such as add, subtract, increment and
+  decrement) functions that don't return a value, especially when used for
+  reference counting.  These functions do not imply memory barriers.
 
-     These are also used for atomic bitop functions that do not return a
-     value (such as set_bit and clear_bit).
+  These are also used for atomic bitop functions that do not return a
+  value (such as set_bit and clear_bit).
 
-     As an example, consider a piece of code that marks an object as being dead
-     and then decrements the object's reference count:
-
-::
+  As an example, consider a piece of code that marks an object as being dead
+  and then decrements the object's reference count::
 
 	obj->dead = 1;
 	smp_mb__before_atomic();
 	atomic_dec(&obj->ref_count);
 
-     This makes sure that the death mark on the object is perceived to be set
-     *before* the reference counter is decremented.
+  This makes sure that the death mark on the object is perceived to be set
+  **before** the reference counter is decremented.
 
-     See Documentation/atomic_{t,bitops}.txt for more information.
+  See ``Documentation/atomic_{t,bitops}.txt`` for more information.
 
 
- (*) dma_wmb();
- (*) dma_rmb();
+* dma_wmb();
+* dma_rmb();
 
-     These are for use with consistent memory to guarantee the ordering
-     of writes or reads of shared memory accessible to both the CPU and a
-     DMA capable device.
+  These are for use with consistent memory to guarantee the ordering
+  of writes or reads of shared memory accessible to both the CPU and a
+  DMA capable device.
 
-     For example, consider a device driver that shares memory with a device
-     and uses a descriptor status value to indicate if the descriptor belongs
-     to the device or the CPU, and a doorbell to notify it when new
-     descriptors are available:
-
-::
+  For example, consider a device driver that shares memory with a device
+  and uses a descriptor status value to indicate if the descriptor belongs
+  to the device or the CPU, and a doorbell to notify it when new
+  descriptors are available::
 
 	if (desc->status != DEVICE_OWN) {
 		/* do not read data until we own descriptor */
@@ -1864,14 +1860,14 @@ There are some more advanced barrier functions:
 		writel(DESC_NOTIFY, doorbell);
 	}
 
-     The dma_rmb() allows us guarantee the device has released ownership
-     before we read the data from the descriptor, and the dma_wmb() allows
-     us to guarantee the data is written to the descriptor before the device
-     can see it now has ownership.  The wmb() is needed to guarantee that the
-     cache coherent memory writes have completed before attempting a write to
-     the cache incoherent MMIO region.
+  The ``dma_rmb()`` allows us guarantee the device has released ownership
+  before we read the data from the descriptor, and the ``dma_wmb()`` allows
+  us to guarantee the data is written to the descriptor before the device
+  can see it now has ownership.  The ``wmb()`` is needed to guarantee that the
+  cache coherent memory writes have completed before attempting a write to
+  the cache incoherent MMIO region.
 
-     See Documentation/DMA-API.txt for more information on consistent memory.
+  See ``Documentation/DMA-API.txt`` for more information on consistent memory.
 
 
 .. _mmio-write-barrier:
@@ -1880,9 +1876,7 @@ MMIO write barrier
 ------------------
 
 The Linux kernel also has a special barrier for use with memory-mapped I/O
-writes:
-
-::
+writes::
 
 	mmiowb();
 
@@ -1890,7 +1884,7 @@ This is a variation on the mandatory write barrier that causes writes to weakly
 ordered I/O regions to be partially ordered.  Its effects may go beyond the
 CPU->Hardware interface and actually affect the hardware at some level.
 
-See the subsection "Acquires vs I/O accesses" for more information.
+See :ref:`acquires-vs-io-accesses` for more information.
 
 
 Implicit kernel memory barriers
@@ -1899,7 +1893,7 @@ Implicit kernel memory barriers
 Some of the other functions in the linux kernel imply memory barriers, amongst
 which are locking and scheduling functions.
 
-This specification is a _minimum_ guarantee; any particular architecture may
+This specification is a **minimum** guarantee; any particular architecture may
 provide more substantial guarantees, but these may not be relied upon outside
 of arch specific code.
 
@@ -1909,51 +1903,53 @@ Lock acquisition functions
 
 The Linux kernel has a number of locking constructs:
 
- (*) spin locks
- (*) R/W spin locks
- (*) mutexes
- (*) semaphores
- (*) R/W semaphores
+* spin locks
+* R/W spin locks
+* mutexes
+* semaphores
+* R/W semaphores
 
 In all cases there are variants on "ACQUIRE" operations and "RELEASE" operations
 for each construct.  These operations all imply certain barriers:
 
- (1) ACQUIRE operation implication:
+#. ACQUIRE operation implication:
 
-     Memory operations issued after the ACQUIRE will be completed after the
-     ACQUIRE operation has completed.
+   Memory operations issued after the ACQUIRE will be completed after the
+   ACQUIRE operation has completed.
 
-     Memory operations issued before the ACQUIRE may be completed after
-     the ACQUIRE operation has completed.
+   Memory operations issued before the ACQUIRE may be completed after
+   the ACQUIRE operation has completed.
 
- (2) RELEASE operation implication:
+#. RELEASE operation implication:
 
-     Memory operations issued before the RELEASE will be completed before the
-     RELEASE operation has completed.
+   Memory operations issued before the RELEASE will be completed before the
+   RELEASE operation has completed.
 
-     Memory operations issued after the RELEASE may be completed before the
-     RELEASE operation has completed.
+   Memory operations issued after the RELEASE may be completed before the
+   RELEASE operation has completed.
 
- (3) ACQUIRE vs ACQUIRE implication:
+#. ACQUIRE vs ACQUIRE implication:
 
-     All ACQUIRE operations issued before another ACQUIRE operation will be
-     completed before that ACQUIRE operation.
+   All ACQUIRE operations issued before another ACQUIRE operation will be
+   completed before that ACQUIRE operation.
 
- (4) ACQUIRE vs RELEASE implication:
+#. ACQUIRE vs RELEASE implication:
 
-     All ACQUIRE operations issued before a RELEASE operation will be
-     completed before the RELEASE operation.
+   All ACQUIRE operations issued before a RELEASE operation will be
+   completed before the RELEASE operation.
 
- (5) Failed conditional ACQUIRE implication:
+#. Failed conditional ACQUIRE implication:
 
-     Certain locking variants of the ACQUIRE operation may fail, either due to
-     being unable to get the lock immediately, or due to receiving an unblocked
-     signal whilst asleep waiting for the lock to become available.  Failed
-     locks do not imply any sort of barrier.
+   Certain locking variants of the ACQUIRE operation may fail, either due to
+   being unable to get the lock immediately, or due to receiving an unblocked
+   signal whilst asleep waiting for the lock to become available.  Failed
+   locks do not imply any sort of barrier.
 
-[!] Note: one of the consequences of lock ACQUIREs and RELEASEs being only
-one-way barriers is that the effects of instructions outside of a critical
-section may seep into the inside of the critical section.
+.. note::
+
+    One of the consequences of lock ACQUIREs and RELEASEs being only
+    one-way barriers is that the effects of instructions outside of a critical
+    section may seep into the inside of the critical section.
 
 An ACQUIRE followed by a RELEASE may not be assumed to be full memory barrier
 because it is possible for an access preceding the ACQUIRE to happen after the
@@ -1973,7 +1969,7 @@ When the ACQUIRE and RELEASE are a lock acquisition and release,
 respectively, this same reordering can occur if the lock's ACQUIRE and
 RELEASE are to the same lock variable, but only from the perspective of
 another CPU not holding that lock.  In short, a ACQUIRE followed by an
-RELEASE may -not- be assumed to be a full memory barrier.
+RELEASE may **not** be assumed to be a full memory barrier.
 
 Similarly, the reverse case of a RELEASE followed by an ACQUIRE does
 not imply a full memory barrier.  Therefore, the CPU's execution of the
@@ -1998,7 +1994,7 @@ the RELEASE would simply complete, thereby avoiding the deadlock.
 	One key point is that we are only talking about the CPU doing
 	the reordering, not the compiler.  If the compiler (or, for
 	that matter, the developer) switched the operations, deadlock
-	-could- occur.
+	**could** occur.
 
 	But suppose the CPU reordered the operations.  In this case,
 	the unlock precedes the lock in the assembly code.  The CPU
@@ -2021,7 +2017,7 @@ systems, and so cannot be counted on in such a situation to actually achieve
 anything at all - especially with respect to I/O accesses - unless combined
 with interrupt disabling operations.
 
-See also the section on "Inter-CPU acquiring barrier effects".
+See also :ref:`inter-cpu-acquiring-barrier-effects`.
 
 
 As an example, consider the following::
@@ -2039,7 +2035,9 @@ The following sequence of events is acceptable::
 
 	ACQUIRE, {*F,*A}, *E, {*C,*D}, *B, RELEASE
 
-	[+] Note that {*F,*A} indicates a combined access.
+.. note::
+
+    {\*F,\*A} indicates a combined access.
 
 But none of the following are::
 
@@ -2078,7 +2076,7 @@ Firstly, the sleeper normally follows something like this sequence of events::
 		schedule();
 	}
 
-A general memory barrier is interpolated automatically by set_current_state()
+A general memory barrier is interpolated automatically by ``set_current_state()``
 after it has altered the task state::
 
 	CPU 1
@@ -2089,7 +2087,7 @@ after it has altered the task state::
 	    <general barrier>
 	LOAD event_indicated
 
-set_current_state() may be wrapped by::
+``set_current_state()`` may be wrapped by::
 
 	prepare_to_wait();
 	prepare_to_wait_exclusive();
@@ -2118,7 +2116,7 @@ or::
 	event_indicated = 1;
 	wake_up_process(event_daemon);
 
-A write memory barrier is implied by wake_up() and co.  if and only if they
+A write memory barrier is implied by ``wake_up()`` and co.  if and only if they
 wake something up.  The barrier occurs before the task state is cleared, and so
 sits between the STORE to indicate the event and the STORE to set TASK_RUNNING::
 
@@ -2207,6 +2205,7 @@ Other functions that imply barriers:
 
 * schedule() and similar imply full memory barriers
 
+.. _inter-cpu-acquiring-barrier-effects:
 
 Inter-CPU acquiring barrier effects
 ===================================
@@ -2245,6 +2244,7 @@ But it won't see any of::
 	*E, *F or *G following RELEASE Q
 
 
+.. _acquires-vs-io-accesses:
 
 Acquires vs I/O accesses
 ------------------------
@@ -2275,7 +2275,7 @@ may be seen by the PCI bridge as follows::
 which would probably cause the hardware to malfunction.
 
 
-What is necessary here is to intervene with an mmiowb() before dropping the
+What is necessary here is to intervene with an ``mmiowb()`` before dropping the
 spinlock, for example::
 
 	CPU 1				CPU 2
@@ -2296,8 +2296,8 @@ before either of the stores issued on CPU 2.
 
 
 Furthermore, following a store by a load from the same device obviates the need
-for the mmiowb(), because the load forces the store to complete before the load
-is performed::
+for the ``mmiowb()``, because the load forces the store to complete before the
+load is performed::
 
 	CPU 1				CPU 2
 	===============================	===============================
@@ -2320,7 +2320,7 @@ Where are memory barriers needed?
 Under normal operation, memory operation reordering is generally not going to
 be a problem as a single-threaded linear piece of code will still appear to
 work correctly, even if it's in an SMP kernel.  There are, however, four
-circumstances in which reordering definitely *could* be a problem:
+circumstances in which reordering definitely **could** be a problem:
 
 * Interprocessor interaction
 
@@ -2357,18 +2357,19 @@ the semaphore's list of waiting processes::
 		struct task_struct *task;
 	};
 
-To wake up a particular waiter, the up_read() or up_write() functions have to:
+To wake up a particular waiter, the ``up_read()`` or ``up_write()`` functions
+have to:
 
- (1) read the next pointer from this waiter's record to know as to where the
-     next waiter record is;
+#. read the next pointer from this waiter's record to know as to where the
+   next waiter record is;
 
- (2) read the pointer to the waiter's task structure;
+#. read the pointer to the waiter's task structure;
 
- (3) clear the task pointer to tell the waiter it has been given the semaphore;
+#. clear the task pointer to tell the waiter it has been given the semaphore;
 
- (4) call wake_up_process() on the task; and
+#. call wake_up_process() on the task; and
 
- (5) release the reference held on the waiter's task struct.
+#. release the reference held on the waiter's task struct.
 
 In other words, it has to perform this sequence of events::
 
@@ -2408,7 +2409,7 @@ Consider then what might happen to the above sequence of events::
 	LOAD waiter->list.next;
 	--- OOPS ---
 
-This could be dealt with using the semaphore lock, but then the down_xxx()
+This could be dealt with using the semaphore lock, but then the ``down_xxx()``
 function has to needlessly get the spinlock again after being woken up.
 
 The way to deal with this is to insert a general SMP memory barrier::
@@ -2426,7 +2427,7 @@ with respect to the other CPUs on the system.  It does _not_ guarantee that all
 the memory accesses before the barrier will be complete by the time the barrier
 instruction itself is complete.
 
-On a UP system - where this wouldn't be a problem - the smp_mb() is just a
+On a UP system - where this wouldn't be a problem - the ``smp_mb()`` is just a
 compiler barrier, thus making sure the compiler emits the instructions in the
 right order without actually intervening in the CPU.  Since there's only one
 CPU, that CPU's dependency ordering logic will take care of everything else.
@@ -2457,16 +2458,16 @@ efficient to reorder, combine or merge accesses - something that would cause
 the device to malfunction.
 
 Inside of the Linux kernel, I/O should be done through the appropriate accessor
-routines - such as inb() or writel() - which know how to make such accesses
-appropriately sequential.  Whilst this, for the most part, renders the explicit
-use of memory barriers unnecessary, there are a couple of situations where they
-might be needed:
+routines - such as ``inb()`` or ``writel()`` - which know how to make such
+accesses appropriately sequential.  Whilst this, for the most part, renders the
+explicit use of memory barriers unnecessary, there are a couple of situations
+where they might be needed:
 
-1. On some systems, I/O stores are not strongly ordered across all CPUs, and
+#. On some systems, I/O stores are not strongly ordered across all CPUs, and
    so for _all_ general drivers locks should be used and mmiowb() must be
    issued prior to unlocking the critical section.
 
-2. If the accessor functions are used to refer to an I/O memory window with
+#. If the accessor functions are used to refer to an I/O memory window with
    relaxed memory access properties, then _mandatory_ memory barriers are
    required to enforce ordering.
 
@@ -2563,12 +2564,12 @@ functions:
 
      However, intermediary hardware (such as a PCI bridge) may indulge in
      deferral if it so wishes; to flush a store, a load from the same location
-     is preferred[*], but a load from the same device or from configuration
+     is preferred [#]_, but a load from the same device or from configuration
      space should suffice for PCI.
 
-     [*] NOTE! attempting to load from the same location as was written to may
-	 cause a malfunction - consider the 16550 Rx/Tx serial registers for
-	 example.
+     .. [#] Attempting to load from the same location as was written to may
+	    cause a malfunction - consider the 16550 Rx/Tx serial registers for
+	    example.
 
      Used with prefetchable I/O memory, an mmiowb() barrier may be required to
      force stores to be ordered.
@@ -2578,18 +2579,18 @@ functions:
 
 * readX_relaxed(), writeX_relaxed()
 
-     These are similar to readX() and writeX(), but provide weaker memory
-     ordering guarantees.  Specifically, they do not guarantee ordering with
-     respect to normal memory accesses (e.g. DMA buffers) nor do they guarantee
-     ordering with respect to LOCK or UNLOCK operations.  If the latter is
-     required, an mmiowb() barrier can be used.  Note that relaxed accesses to
-     the same peripheral are guaranteed to be ordered with respect to each
-     other.
+     These are similar to ``readX()`` and ``writeX()``, but provide weaker
+     memory ordering guarantees.  Specifically, they do not guarantee ordering
+     with respect to normal memory accesses (e.g. DMA buffers) nor do they
+     guarantee ordering with respect to LOCK or UNLOCK operations.  If the
+     latter is required, an ``mmiowb()`` barrier can be used.  Note that
+     relaxed accesses to the same peripheral are guaranteed to be ordered with
+     respect to each other.
 
 * ioreadX(), iowriteX()
 
      These will perform appropriately for the type of access they're actually
-     doing, be it inX()/outX() or readX()/writeX().
+     doing, be it ``inX()``/``outX()`` or ``readX()``/``writeX()``.
 
 
 Assumed minimum execution ordering model
@@ -2602,7 +2603,7 @@ frv), and so the most relaxed case (namely DEC Alpha) must be assumed outside
 of arch-specific code.
 
 This means that it must be considered that the CPU will execute its instruction
-stream in any order it feels like - or even in parallel - provided that if an
+stream in any order it feels like **or even in parallel** provided that if an
 instruction in the stream depends on an earlier instruction, then that
 earlier instruction must be sufficiently complete [#]_ before the later
 instruction may proceed; in other words: provided that the appearance of
@@ -2686,6 +2687,7 @@ in the system.
     and/or the use of any special device communication instructions the CPU may
     have.
 
+.. _cache-coherency:
 
 Cache coherency
 ---------------
@@ -2723,21 +2725,21 @@ has a pair of parallel data caches (CPU 1 has A/B, and CPU 2 has C/D)::
 Imagine the system has the following properties:
 
 * an odd-numbered cache line may be in cache A, cache C or it may still be
-     resident in memory;
+  resident in memory;
 
 * an even-numbered cache line may be in cache B, cache D or it may still be
-     resident in memory;
+  resident in memory;
 
 * whilst the CPU core is interrogating one cache, the other cache may be
-     making use of the bus to access the rest of the system - perhaps to
-     displace a dirty cacheline or to do a speculative load;
+  making use of the bus to access the rest of the system - perhaps to
+  displace a dirty cacheline or to do a speculative load;
 
 * each cache has a queue of operations that need to be applied to that cache
-     to maintain coherency with the rest of the system;
+  to maintain coherency with the rest of the system;
 
 * the coherency queue is not flushed by normal loads to lines already
-     present in the cache, even though the contents of the queue may
-     potentially affect those loads.
+  present in the cache, even though the contents of the queue may
+  potentially affect those loads.
 
 Imagine, then, that two writes are made on the first CPU, with a write barrier
 between them to guarantee that they will appear to reach that CPU's caches in
@@ -2765,7 +2767,7 @@ now imagine that the second CPU wants to read those values::
 
 The above pair of reads may then fail to happen in the expected order, as the
 cacheline holding p may get updated in one of the second CPU's caches whilst
-the update to the cacheline holding v is delayed in the other of the second
+the update to the cacheline holding ``v`` is delayed in the other of the second
 CPU's caches by some other cache event::
 
 	CPU 1		CPU 2		COMMENT
@@ -2912,7 +2914,7 @@ is::
 
 
 However, it is guaranteed that a CPU will be self-consistent: it will see its
-_own_ accesses appear to be correctly ordered, without the need for a memory
+**own** accesses appear to be correctly ordered, without the need for a memory
 barrier.  For instance with the following code::
 
 	U = READ_ONCE(*A);
@@ -2937,13 +2939,14 @@ accesses::
 
 in that order, but, without intervention, the sequence may have almost any
 combination of elements combined or discarded, provided the program's view
-of the world remains consistent.  Note that READ_ONCE() and WRITE_ONCE()
-are -not- optional in the above example, as there are architectures
+of the world remains consistent.  Note that ``READ_ONCE()`` and ``WRITE_ONCE()``
+are **not** optional in the above example, as there are architectures
 where a given CPU might reorder successive loads to the same location.
-On such architectures, READ_ONCE() and WRITE_ONCE() do whatever is
+On such architectures, ``READ_ONCE()`` and ``WRITE_ONCE()`` do whatever is
 necessary to prevent this, for example, on Itanium the volatile casts
-used by READ_ONCE() and WRITE_ONCE() cause GCC to emit the special ld.acq
-and st.rel instructions (respectively) that prevent such reordering.
+used by ``READ_ONCE()`` and ``WRITE_ONCE()`` cause GCC to emit the special
+``ld.acq`` and ``st.rel`` instructions (respectively) that prevent such
+reordering.
 
 The compiler may also combine, discard or defer elements of the sequence before
 the CPU even sees them.
@@ -2984,8 +2987,9 @@ changes vs new data occur in the right order.
 
 The Alpha defines the Linux kernel's memory barrier model.
 
-See the subsection on "Cache Coherency" above.
+See :ref:`cache-coherency`
 
+.. _virtual-machine-guests:
 
 Virtual machine guests
 ----------------------
@@ -3002,8 +3006,8 @@ should use ``virt_mb()`` rather than ``smp_mb()`` when synchronizing against a
 (possibly SMP) host.
 
 These are equivalent to ``smp_mb()`` etc counterparts in all other respects,
-in particular, they do not control MMIO effects: to control
-MMIO effects, use mandatory barriers.
+in particular, they do not control MMIO effects: to control MMIO effects, use
+mandatory barriers.
 
 
 Example uses
