@@ -39,31 +39,12 @@ __irq_entry:
 	@
 	@ Invoke the IRQ handler
 	@
-	mrs	r0, ipsr
-	ldr	r1, =V7M_xPSR_EXCEPTIONNO
-	and	r0, r1
-	sub	r0, #16
 	mov	r1, sp
 	stmdb	sp!, {lr}
-	@ routine called with r0 = irq number, r1 = struct pt_regs *
-	bl	nvic_handle_irq
+	@ routine called with r0 = don't care, r1 = struct pt_regs *
+	bl	_irq_entry
 
 	pop	{lr}
-	@
-	@ Check for any pending work if returning to user
-	@
-	ldr	r1, =BASEADDR_V7M_SCB
-	ldr	r0, [r1, V7M_SCB_ICSR]
-	tst	r0, V7M_SCB_ICSR_RETTOBASE
-	beq	2f
-
-	get_thread_info tsk
-	ldr	r2, [tsk, #TI_FLAGS]
-	tst	r2, #_TIF_WORK_MASK
-	beq	2f			@ no work pending
-	mov	r0, #V7M_SCB_ICSR_PENDSVSET
-	str	r0, [r1, V7M_SCB_ICSR]	@ raise PendSV
-
 2:
 	@ registers r0-r3 and r12 are automatically restored on exception
 	@ return. r4-r7 were not clobbered in v7m_exception_entry so for
