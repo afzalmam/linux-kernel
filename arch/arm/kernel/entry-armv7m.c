@@ -31,3 +31,9 @@ asmlinkage void irq_entry(unsigned long unused, struct pt_regs *regs)
 		}
 	}
 }
+
+asmlinkage void pendsv_entry(unsigned long unused, struct pt_regs *regs)
+{
+	writel_relaxed(V7M_SCB_ICSR_PENDSVCLR,
+			BASEADDR_V7M_SCB + V7M_SCB_ICSR);
+}
