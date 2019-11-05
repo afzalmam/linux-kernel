@@ -59,14 +59,10 @@ ENDPROC(__irq_entry)
 __pendsv_entry:
 	v7m_exception_entry
 
-	ldr	r1, =BASEADDR_V7M_SCB
-	mov	r0, #V7M_SCB_ICSR_PENDSVCLR
-	str	r0, [r1, V7M_SCB_ICSR]	@ clear PendSV
+	mov	r0, sp
+	bl	_pendsv_entry
 
-	@ execute the pending work, including reschedule
-	get_thread_info tsk
-	mov	why, #0
-	b	ret_to_user_from_irq
+	v7m_exception_slow_exit ret_r0 = 0
 ENDPROC(__pendsv_entry)
 
 /*
