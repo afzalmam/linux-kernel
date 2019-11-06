@@ -16,6 +16,8 @@ void nvic_handle_irq(irq_hw_number_t hwirq, struct pt_regs *regs);
 void addr_limit_check_failed(void);
 int do_work_pending(struct pt_regs *regs, unsigned int thread_flags,
 		    int syscall);
+int syscall_trace_enter(struct pt_regs *regs, int scno);
+
 #ifndef CONFIG_CONTEXT_TRACKING
 static inline void context_tracking_user_enter(void) {}
 #endif
@@ -41,7 +43,17 @@ asmlinkage void _irq_entry(unsigned long unused, struct pt_regs *regs)
 }
 
 static inline void _reload_syscall_args(void) { }
-static inline void _local_restart(void) { }
+static inline void _push_syscall_args_56(void) { }
+
+static void _local_restart(struct pt_regs *reg)
+{
+	unsigned long scno = reg->ARM_r8;
+
+	_push_syscall_args_56();
+	if (current_thread_info()->flags & _TIF_SYSCALL_WORK) {
+		scno = syscall_trace_enter(reg, scno);
+	}
+}
 
 static void _ret_to_user_from_irq(struct pt_regs *reg, struct thread_info *tinfo,
 				  unsigned long scno)
@@ -56,7 +68,7 @@ static void _ret_to_user_from_irq(struct pt_regs *reg, struct thread_info *tinfo
 			if (ret < 0)
 				scno = __NR_restart_syscall - __NR_SYSCALL_BASE;
 			_reload_syscall_args();
-			_local_restart();
+			_local_restart(reg);
 			return;
 		}
 	}
