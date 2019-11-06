@@ -16,7 +16,7 @@ CFLAGS_REMOVE_return_address.o = -pg
 
 # Object file lists.
 
-obj-y		:= elf.o entry-common.o irq.o opcodes.o \
+obj-y		:= elf.o irq.o opcodes.o \
 		   process.o ptrace.o reboot.o return_address.o \
 		   setup.o signal.o sigreturn_codes.o \
 		   stacktrace.o sys_arm.o time.o traps.o
@@ -26,9 +26,9 @@ obj-$(CONFIG_ATAGS_PROC)	+= atags_proc.o
 obj-$(CONFIG_DEPRECATED_PARAM_STRUCT) += atags_compat.o
 
 ifeq ($(CONFIG_CPU_V7M),y)
-obj-y		+= entry-armv7m.o entry-v7m.o v7m.o
+obj-y		+= entry-armv7m.o entry-v7m.o entry2-v7m.o v7m.o
 else
-obj-y		+= entry-armv.o
+obj-y		+= entry-common.o entry-armv.o
 endif
 
 obj-$(CONFIG_MMU)		+= bugs.o
