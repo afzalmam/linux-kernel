@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- *  linux/arch/arm/kernel/entry-common.S
+ *  linux/arch/arm/kernel/entry2-v7m.S
  *
  *  Copyright (C) 2000 Russell King
  */
@@ -16,21 +16,11 @@
 
 	.equ	NR_syscalls, __NR_syscalls
 
-#ifdef CONFIG_NEED_RET_TO_USER
-#include <mach/entry-macro.S>
-#else
-	.macro  arch_ret_to_user, tmp1, tmp2
-	.endm
-#endif
-
 #include "entry-header.S"
 
-saved_psr	.req	r8
 #if defined(CONFIG_TRACE_IRQFLAGS) || defined(CONFIG_CONTEXT_TRACKING)
-saved_pc	.req	r9
 #define TRACE(x...) x
 #else
-saved_pc	.req	lr
 #define TRACE(x...)
 #endif
 
@@ -55,10 +45,6 @@ __ret_fast_syscall:
 	ldr	r1, [tsk, #TI_FLAGS]		@ re-check for syscall tracing
 	tst	r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
 	bne	fast_work_pending
-
-
-	/* perform architecture specific actions before user return */
-	arch_ret_to_user r1, lr
 
 	restore_user_regs fast = 1, offset = S_OFF
  UNWIND(.fnend		)
@@ -135,9 +121,6 @@ ENTRY(ret_to_user_from_irq)
 	bne	slow_work_pending
 no_work_pending:
 	asm_trace_hardirqs_on save = 0
-
-	/* perform architecture specific actions before user return */
-	arch_ret_to_user r1, lr
 	ct_user_enter save = 0
 
 	restore_user_regs fast = 0, offset = 0
@@ -164,82 +147,14 @@ ENDPROC(ret_from_fork)
 
 	.align	5
 ENTRY(vector_swi)
-#ifdef CONFIG_CPU_V7M
 	v7m_exception_entry
-#else
-	sub	sp, sp, #PT_REGS_SIZE
-	stmia	sp, {r0 - r12}			@ Calling r0 - r12
- ARM(	add	r8, sp, #S_PC		)
- ARM(	stmdb	r8, {sp, lr}^		)	@ Calling sp, lr
- THUMB(	mov	r8, sp			)
- THUMB(	store_user_sp_lr r8, r10, S_SP	)	@ calling sp, lr
-	mrs	saved_psr, spsr			@ called from non-FIQ mode, so ok.
- TRACE(	mov	saved_pc, lr		)
-	str	saved_pc, [sp, #S_PC]		@ Save calling PC
-	str	saved_psr, [sp, #S_PSR]		@ Save CPSR
-	str	r0, [sp, #S_OLD_R0]		@ Save OLD_R0
-#endif
 	zero_fp
 	alignment_trap r10, ip, __cr_alignment
 	asm_trace_hardirqs_on save=0
 	enable_irq_notrace
 	ct_user_exit save=0
-
-	/*
-	 * Get the system call number.
-	 */
-
-#if defined(CONFIG_OABI_COMPAT)
-
-	/*
-	 * If we have CONFIG_OABI_COMPAT then we need to look at the swi
-	 * value to determine if it is an EABI or an old ABI call.
-	 */
-#ifdef CONFIG_ARM_THUMB
-	tst	saved_psr, #PSR_T_BIT
-	movne	r10, #0				@ no thumb OABI emulation
- USER(	ldreq	r10, [saved_pc, #-4]	)	@ get SWI instruction
-#else
- USER(	ldr	r10, [saved_pc, #-4]	)	@ get SWI instruction
-#endif
- ARM_BE8(rev	r10, r10)			@ little endian instruction
-
-#elif defined(CONFIG_AEABI)
-
-	/*
-	 * Pure EABI user space always put syscall number into scno (r7).
-	 */
-#elif defined(CONFIG_ARM_THUMB)
-	/* Legacy ABI only, possibly thumb mode. */
-	tst	saved_psr, #PSR_T_BIT		@ this is SPSR from save_user_regs
-	addne	scno, r7, #__NR_SYSCALL_BASE	@ put OS number in
- USER(	ldreq	scno, [saved_pc, #-4]	)
-
-#else
-	/* Legacy ABI only. */
- USER(	ldr	scno, [saved_pc, #-4]	)	@ get SWI instruction
-#endif
-
-	/* saved_psr and saved_pc are now dead */
-
-	uaccess_disable tbl
-
 	adr	tbl, sys_call_table		@ load syscall table pointer
 
-#if defined(CONFIG_OABI_COMPAT)
-	/*
-	 * If the swi argument is zero, this is an EABI call and we do nothing.
-	 *
-	 * If this is an old ABI call, get the syscall number into scno and
-	 * get the old ABI syscall table address.
-	 */
-	bics	r10, r10, #0xff000000
-	eorne	scno, r10, #__NR_OABI_SYSCALL_BASE
-	ldrne	tbl, =sys_oabi_call_table
-#elif !defined(CONFIG_AEABI)
-	bic	scno, scno, #0xff000000		@ mask off SWI op-code
-	eor	scno, scno, #__NR_SYSCALL_BASE	@ check OS number
-#endif
 	get_thread_info tsk
 	/*
 	 * Reload the registers that may have been corrupted on entry to
@@ -262,22 +177,6 @@ local_restart:
 	bcs	arm_syscall
 	mov	why, #0				@ no longer a real syscall
 	b	sys_ni_syscall			@ not private func
-
-#if defined(CONFIG_OABI_COMPAT) || !defined(CONFIG_AEABI)
-	/*
-	 * We failed to handle a fault trying to access the page
-	 * containing the swi instruction, but we're not really in a
-	 * position to return -EFAULT. Instead, return back to the
-	 * instruction and re-enter the user fault handling path trying
-	 * to page it in. This will likely result in sending SEGV to the
-	 * current task.
-	 */
-9001:
-	sub	lr, saved_pc, #4
-	str	lr, [sp, #S_PC]
-	get_thread_info tsk
-	b	ret_fast_syscall
-#endif
 ENDPROC(vector_swi)
 
 	/*
@@ -366,10 +265,6 @@ sys_syscall:
 		bic	scno, r0, #__NR_OABI_SYSCALL_BASE
 		cmp	scno, #__NR_syscall - __NR_SYSCALL_BASE
 		cmpne	scno, #NR_syscalls	@ check range
-#ifdef CONFIG_CPU_SPECTRE
-		movhs	scno, #0
-		csdb
-#endif
 		stmialo	sp, {r5, r6}		@ shuffle args
 		movlo	r0, r1
 		movlo	r1, r2
@@ -411,50 +306,3 @@ sys_mmap2:
 		str	r5, [sp, #4]
 		b	sys_mmap_pgoff
 ENDPROC(sys_mmap2)
-
-#ifdef CONFIG_OABI_COMPAT
-
-/*
- * These are syscalls with argument register differences
- */
-
-sys_oabi_pread64:
-		stmia	sp, {r3, r4}
-		b	sys_pread64
-ENDPROC(sys_oabi_pread64)
-
-sys_oabi_pwrite64:
-		stmia	sp, {r3, r4}
-		b	sys_pwrite64
-ENDPROC(sys_oabi_pwrite64)
-
-sys_oabi_truncate64:
-		mov	r3, r2
-		mov	r2, r1
-		b	sys_truncate64
-ENDPROC(sys_oabi_truncate64)
-
-sys_oabi_ftruncate64:
-		mov	r3, r2
-		mov	r2, r1
-		b	sys_ftruncate64
-ENDPROC(sys_oabi_ftruncate64)
-
-sys_oabi_readahead:
-		str	r3, [sp]
-		mov	r3, r2
-		mov	r2, r1
-		b	sys_readahead
-ENDPROC(sys_oabi_readahead)
-
-/*
- * Let's declare a second syscall table for old ABI binaries
- * using the compatibility syscall entries.
- */
-	syscall_table_start sys_oabi_call_table
-#define COMPAT(nr, native, compat) syscall nr, compat
-#include <calls-oabi.S>
-	syscall_table_end sys_oabi_call_table
-
-#endif
-
