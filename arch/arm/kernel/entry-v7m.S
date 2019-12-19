@@ -48,7 +48,7 @@ __irq_entry:
 	@ routine called with r0 = irq number, r1 = struct pt_regs *
 	bl	nvic_handle_irq
 
-	pop	{lr}
+	get_thread_info tsk
 	@
 	@ Check for any pending work if returning to user
 	@
@@ -57,7 +57,6 @@ __irq_entry:
 	tst	r0, V7M_SCB_ICSR_RETTOBASE
 	beq	2f
 
-	get_thread_info tsk
 	ldr	r2, [tsk, #TI_FLAGS]
 	tst	r2, #_TIF_WORK_MASK
 	beq	2f			@ no work pending
@@ -65,6 +64,8 @@ __irq_entry:
 	str	r0, [r1, V7M_SCB_ICSR]	@ raise PendSV
 
 2:
+	pop	{lr}
+
 	@ registers r0-r3 and r12 are automatically restored on exception
 	@ return. r4-r7 were not clobbered in v7m_exception_entry so for
 	@ correctness they don't need to be restored. So only r8-r11 must be
