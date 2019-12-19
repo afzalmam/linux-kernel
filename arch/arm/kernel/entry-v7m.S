@@ -60,11 +60,31 @@ __irq_entry:
 	get_thread_info tsk
 	ldr	r2, [tsk, #TI_FLAGS]
 	tst	r2, #_TIF_WORK_MASK
-	beq	2f			@ no work pending
+	beq	4f			@ no work pending
 	mov	r0, #V7M_SCB_ICSR_PENDSVSET
 	str	r0, [r1, V7M_SCB_ICSR]	@ raise PendSV
+	b	4f
 
 2:
+#ifdef CONFIG_PREEMPT
+	get_thread_info tsk
+	ldr	r2, [tsk, #TI_PREEMPT]		@ get preempt count
+	teq	r2, #0				@ if preempt count != 0
+	bne	svc_preempt_end
+
+	ldr	r0, [tsk, #TI_FLAGS]		@ get flags
+	tst	r0, #_TIF_NEED_RESCHED
+	beq	svc_preempt_end
+
+	stmdb	sp!, {lr}
+3:	bl	preempt_schedule_irq		@ irq en/disable is done inside
+	ldr	r0, [tsk, #TI_FLAGS]		@ get flags
+	tst	r0, #_TIF_NEED_RESCHED
+	bne	3b
+	pop	{lr}
+svc_preempt_end:
+#endif
+4:
 	@ registers r0-r3 and r12 are automatically restored on exception
 	@ return. r4-r7 were not clobbered in v7m_exception_entry so for
 	@ correctness they don't need to be restored. So only r8-r11 must be
