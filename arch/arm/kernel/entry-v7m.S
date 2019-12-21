@@ -55,14 +55,29 @@ __irq_entry:
 	ldr	r1, =BASEADDR_V7M_SCB
 	ldr	r0, [r1, V7M_SCB_ICSR]
 	tst	r0, V7M_SCB_ICSR_RETTOBASE
-	beq	2f
+	beq	101f
 
 	ldr	r2, [tsk, #TI_FLAGS]
 	tst	r2, #_TIF_WORK_MASK
 	beq	2f			@ no work pending
 	mov	r0, #V7M_SCB_ICSR_PENDSVSET
 	str	r0, [r1, V7M_SCB_ICSR]	@ raise PendSV
+	b	2f
 
+101:
+#ifdef CONFIG_PREEMPT
+	ldr	r2, [tsk, #TI_PREEMPT]
+	teq	r2, #0			@ preempt count != 0 ?
+	bne	2f
+
+	ldr	r0, [tsk, #TI_FLAGS]
+	tst	r0, #_TIF_NEED_RESCHED	@ __TIF_NEED_RESCHED set ?
+	beq	2f
+102:	bl	preempt_schedule_irq
+	ldr	r0, [tsk, #TI_FLAGS]
+	tst	r0, #_TIF_NEED_RESCHED	@ __TIF_NEED_RESCHED set ?
+	bne	102b
+#endif
 2:
 	pop	{lr}
 
