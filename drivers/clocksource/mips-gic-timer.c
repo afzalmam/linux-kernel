@@ -67,13 +67,6 @@ static irqreturn_t gic_compare_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static struct irqaction gic_compare_irqaction = {
-	.handler = gic_compare_interrupt,
-	.percpu_dev_id = &gic_clockevent_device,
-	.flags = IRQF_PERCPU | IRQF_TIMER,
-	.name = "timer",
-};
-
 static void gic_clockevent_cpu_init(unsigned int cpu,
 				    struct clock_event_device *cd)
 {
@@ -137,7 +130,8 @@ static int gic_clockevent_init(void)
 	if (!gic_frequency)
 		return -ENXIO;
 
-	ret = setup_percpu_irq(gic_timer_irq, &gic_compare_irqaction);
+	ret = __request_percpu_irq(gic_timer_irq, gic_compare_interrupt,
+				   IRQF_TIMER, "timer", &gic_clockevent_device);
 	if (ret < 0) {
 		pr_err("IRQ %d setup failed (%d)\n", gic_timer_irq, ret);
 		return ret;
