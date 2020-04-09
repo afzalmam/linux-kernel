@@ -2325,21 +2325,6 @@ bad:
 }
 
 /**
- *	remove_percpu_irq - free a per-cpu interrupt
- *	@irq: Interrupt line to free
- *	@act: irqaction for the interrupt
- *
- * Used to remove interrupts statically setup by the early boot process.
- */
-void remove_percpu_irq(unsigned int irq, struct irqaction *act)
-{
-	struct irq_desc *desc = irq_to_desc(irq);
-
-	if (desc && irq_settings_is_per_cpu_devid(desc))
-	    __free_percpu_irq(irq, act->percpu_dev_id);
-}
-
-/**
  *	free_percpu_irq - free an interrupt allocated with request_percpu_irq
  *	@irq: Interrupt line to free
  *	@dev_id: Device identity to free
@@ -2375,33 +2360,6 @@ void free_percpu_nmi(unsigned int irq, void __percpu *dev_id)
 		return;
 
 	kfree(__free_percpu_irq(irq, dev_id));
-}
-
-/**
- *	setup_percpu_irq - setup a per-cpu interrupt
- *	@irq: Interrupt line to setup
- *	@act: irqaction for the interrupt
- *
- * Used to statically setup per-cpu interrupts in the early boot process.
- */
-int setup_percpu_irq(unsigned int irq, struct irqaction *act)
-{
-	struct irq_desc *desc = irq_to_desc(irq);
-	int retval;
-
-	if (!desc || !irq_settings_is_per_cpu_devid(desc))
-		return -EINVAL;
-
-	retval = irq_chip_pm_get(&desc->irq_data);
-	if (retval < 0)
-		return retval;
-
-	retval = __setup_irq(irq, desc, act);
-
-	if (retval)
-		irq_chip_pm_put(&desc->irq_data);
-
-	return retval;
 }
 
 /**
