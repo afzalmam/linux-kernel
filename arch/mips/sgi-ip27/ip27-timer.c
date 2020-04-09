@@ -68,13 +68,6 @@ static irqreturn_t hub_rt_counter_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-struct irqaction hub_rt_irqaction = {
-	.handler	= hub_rt_counter_handler,
-	.percpu_dev_id	= &hub_rt_clockevent,
-	.flags		= IRQF_PERCPU | IRQF_TIMER,
-	.name		= "hub-rt",
-};
-
 /*
  * This is a hack; we really need to figure these values out dynamically
  *
@@ -111,9 +104,13 @@ void hub_rt_clock_event_init(void)
 
 static void __init hub_rt_clock_event_global_init(void)
 {
+	int irq = IP27_RT_TIMER_IRQ;
+
 	irq_set_handler(IP27_RT_TIMER_IRQ, handle_percpu_devid_irq);
 	irq_set_percpu_devid(IP27_RT_TIMER_IRQ);
-	setup_percpu_irq(IP27_RT_TIMER_IRQ, &hub_rt_irqaction);
+	if (__request_percpu_irq(irq, hub_rt_counter_handler, IRQF_TIMER,
+				 "hub-rt", &hub_rt_clockevent) < 0)
+		pr_err("Failed to request percpu irq %d (hub-rt)\n", irq);
 }
 
 static u64 hub_rt_read(struct clocksource *cs)

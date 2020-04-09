@@ -52,11 +52,11 @@ void __init plat_time_init(void)
 	int irq = get_c0_compare_int();
 
 	cp0_timer_irq_installed = 1;
-	c0_compare_irqaction.percpu_dev_id = &mips_clockevent_device;
-	c0_compare_irqaction.flags &= ~IRQF_SHARED;
 	irq_set_handler(irq, handle_percpu_devid_irq);
 	irq_set_percpu_devid(irq);
-	setup_percpu_irq(irq, &c0_compare_irqaction);
+	if (__request_percpu_irq(irq, c0_compare_interrupt, IRQF_TIMER, "timer",
+				 &mips_clockevent_device) < 0)
+		pr_err("Failed to request percpu irq %d (timer)\n", irq);
 	enable_percpu_irq(irq, IRQ_TYPE_NONE);
 
 	ip30_heart_clocksource_init();
