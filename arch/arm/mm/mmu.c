@@ -1344,7 +1344,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	 * Clear page table above VMALLOC_START except pmd's used by static
 	 * kernel & top pmd used by early fixmaps
 	 */
-	addr = __phys_to_kimg(round_up(__pa(KERNEL_END), PGDIR_SIZE));
+	addr = __phys_to_kimg(round_up(__pa(KERNEL_END), PMD_SIZE));
 	for (; addr < (FIXADDR_TOP & PMD_MASK); addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
