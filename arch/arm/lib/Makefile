@@ -16,8 +16,13 @@ lib-y		:= changebit.o csumipv6.o csumpartial.o               \
 		   io-readsb.o io-writesb.o io-readsl.o io-writesl.o  \
 		   call_with_stack.o bswapsdi2.o
 
-mmu-y		:= clear_user.o copy_page.o getuser.o putuser.o       \
-		   copy_from_user.o copy_to_user.o
+mmu-y		:= clear_user.o copy_page.o getuser.o putuser.o
+
+ifndef CONFIG_VMSPLIT_4G_HACK
+  mmu-y		+= copy_from_user.o copy_to_user.o
+else
+  mmu-y		+= copy_user.o
+endif
 
 ifdef CONFIG_CC_IS_CLANG
   lib-y	+= backtrace-clang.o

@@ -1326,6 +1326,13 @@ config PAGE_OFFSET
 	default 0xB0000000 if VMSPLIT_3G_OPT
 	default 0xC0000000
 
+config VMSPLIT_4G_HACK
+	bool "Experimental changes for 4G/4G user/kernel split"
+	depends on ARM_LPAE
+	help
+	  Experimental changes for 4G/4G usr/kernel split, contains
+	  hacks during development of 4G/4G
+
 config NR_CPUS
 	int "Maximum number of CPUs (2-32)"
 	range 2 32
