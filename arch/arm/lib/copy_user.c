@@ -228,7 +228,7 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 	if (!pages)
 		goto end;
 
-	ret = get_user_pages_fast((unsigned long)to, num_pages, FOLL_WRITE, pages);
+	ret = get_user_pages_fast((unsigned long)to, num_pages, 0, pages);
 	if (ret < 0)
 		goto free_pages;
 
