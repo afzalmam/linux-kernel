@@ -6,9 +6,10 @@
 #include <linux/mm.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
+#include <asm/pgalloc.h>
 
 // #define DEBUG1
-// #define DEBUG2
+#define DEBUG2
 #ifdef DEBUG1
 #define	pr_my1(fmt, ...)	printk(pr_fmt(fmt), ##__VA_ARGS__)
 #else
@@ -19,6 +20,8 @@
 #else
 #define	pr_my2(fmt, ...)
 #endif
+
+static pgd_t *pgd_zero;
 
 static pte_t *virt_to_pte(struct mm_struct *mm, unsigned long addr)
 {
@@ -49,14 +52,14 @@ static pte_t *virt_to_pte(struct mm_struct *mm, unsigned long addr)
 	return pte_offset_map(pmd, addr);
 }
 
-static struct page *get_original_page(unsigned long addr)
+static struct page *get_original_page(unsigned long addr, pte_t **ppte)
 {
 	struct page *page;
 	pte_t *pte;
 
 	pte = virt_to_pte(current->mm, addr);
 	page = pte_page(*pte);
-	pte_unmap(pte);
+	*ppte = pte;
 	return page;
 }
 
@@ -144,8 +147,9 @@ static int copy_chunk_to_user(unsigned long to, int len, void *arg)
 
 unsigned long arm_copy_from_user(void *to, const void __user *from, unsigned long n)
 {
-	struct page **pages;
+	struct page **pages, *orig_page;
 	int num_pages, ret, i;
+	pte_t *pte, pte_val;
 
 	pr_my1("[%s] to: %px, from: %px, n: %lu\n", __func__, to, from, n);
 	if (uaccess_kernel()) {
@@ -154,6 +158,12 @@ unsigned long arm_copy_from_user(void *to, const void __user *from, unsigned lon
 		return 0;
 	}
 	pr_my1("[%s] user space copy\n", __func__);
+
+	orig_page = get_original_page((unsigned long)to, &pte);
+	pte_val = *pte;
+	pte_unmap(pte);
+	pr_my1("[%s] user page: %px, pte: %llx\n", __func__, orig_page, pte_val);
+
 	num_pages = DIV_ROUND_UP((unsigned long)from + n, PAGE_SIZE) - (unsigned long)from / PAGE_SIZE;
 	pages = kmalloc_array(num_pages, sizeof(*pages), GFP_KERNEL | __GFP_ZERO);
 	if (!pages)
@@ -167,6 +177,8 @@ unsigned long arm_copy_from_user(void *to, const void __user *from, unsigned lon
 		num_pages = ret;
 		goto put_pages;
 	}
+
+	pr_my1("[%s] num_pages: %d, page: %px\n", __func__, num_pages, *pages);
 
  	n = buffer_op((unsigned long) from, n, copy_chunk_from_user, &to, pages);
 
@@ -185,6 +197,8 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 {
 	struct page **pages, *orig_page;
 	int num_pages, ret, i;
+	pte_t *pte, pte_val;
+	u32 ttbr0l_orig, ttbr0h_orig, ttbr0l_new, ttbr0h_new;
 
 	pr_my1("[%s] to: %px, from: %px, n: %lu\n", __func__, to, from, n);
 	if (uaccess_kernel()) {
@@ -193,14 +207,28 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 		return 0;
 	}
 	pr_my1("[%s] user space copy\n", __func__);
-	orig_page = get_original_page((unsigned long)to);
-	pr_my2("[%s] user page: %px\n", __func__, orig_page);
+
+	ttbr0h_new = ttbr0l_new = 0;
+	asm volatile (	"mrrc p15, 0, %0, %1, c2\n"
+			"mcrr p15, 0, %2, %3, c2\n"
+			"isb"
+			: "=r" (ttbr0l_orig), "=r" (ttbr0h_orig)
+			: "r" (ttbr0l_new), "r" (ttbr0h_new)
+			:);
+
+	pr_my1("[%s] ttbr0h: %x, ttbr0l: %x\n", __func__, ttbr0h_orig, ttbr0l_orig);
+
+	orig_page = get_original_page((unsigned long)to, &pte);
+	pte_val = *pte;
+	pte_unmap(pte);
+	pr_my1("[%s] user page: %px, pte: %llx\n", __func__, orig_page, pte_val);
+
 	num_pages = DIV_ROUND_UP((unsigned long)to + n, PAGE_SIZE) - (unsigned long)to / PAGE_SIZE;
 	pages = kmalloc_array(num_pages, sizeof(*pages), GFP_KERNEL | __GFP_ZERO);
 	if (!pages)
 		goto end;
 
-	ret = get_user_pages_fast((unsigned long)to, num_pages, 0, pages);
+	ret = get_user_pages_fast((unsigned long)to, num_pages, FOLL_WRITE, pages);
 	if (ret < 0)
 		goto free_pages;
 
@@ -209,7 +237,8 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 		goto put_pages;
 	}
 
- 	pr_my2("[%s] num_pages: %d, page: %px\n", __func__, num_pages, *pages);
+	pr_my1("[%s] num_pages: %d, page: %px\n", __func__, num_pages, *pages);
+
  	n = buffer_op((unsigned long) to, n, copy_chunk_to_user, &from, pages);
 
 put_pages:
@@ -219,6 +248,26 @@ free_pages:
 	kfree(pages);
 end:
  
+	asm volatile (	"mcrr p15, 0, %0, %1, c2\n"
+			"isb"
+			:
+			: "r" (ttbr0l_orig), "r" (ttbr0h_orig)
+			:);
+
+	pr_my1("[%s] ttbr0h: %x, ttbr0l: %x\n", __func__, ttbr0h_orig, ttbr0l_orig);
+
 	return n;
 }
 EXPORT_SYMBOL(arm_copy_to_user);
+
+static int __init create_no_user_pgd(void)
+{
+	pgd_zero = pgd_alloc(&init_mm);
+	if (!pgd_zero)
+		printk("[%s] pgd_alloc failed\n", __func__);
+	else
+		printk("[%s] pgd_zero: %px\n", __func__, pgd_zero);
+
+	return 0;
+}
+core_initcall(create_no_user_pgd);
