@@ -208,6 +208,11 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 	}
 	pr_my1("[%s] user space copy\n", __func__);
 
+	orig_page = get_original_page((unsigned long)to, &pte);
+	pte_val = *pte;
+	pte_unmap(pte);
+	pr_my1("[%s] user page: %px, pte: %llx\n", __func__, orig_page, pte_val);
+
 	ttbr0h_new = 0;
 	ttbr0l_new = (u32)pgd_zero;
 	asm volatile (	"mrrc p15, 0, %0, %1, c2\n"
@@ -218,11 +223,6 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 			:);
 
 	pr_my1("[%s] ttbr0h: %x, ttbr0l: %x\n", __func__, ttbr0h_orig, ttbr0l_orig);
-
-	orig_page = get_original_page((unsigned long)to, &pte);
-	pte_val = *pte;
-	pte_unmap(pte);
-	pr_my1("[%s] user page: %px, pte: %llx\n", __func__, orig_page, pte_val);
 
 	num_pages = DIV_ROUND_UP((unsigned long)to + n, PAGE_SIZE) - (unsigned long)to / PAGE_SIZE;
 	pages = kmalloc_array(num_pages, sizeof(*pages), GFP_KERNEL | __GFP_ZERO);
