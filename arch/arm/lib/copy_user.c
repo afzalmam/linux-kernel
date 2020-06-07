@@ -208,7 +208,8 @@ unsigned long arm_copy_to_user(void __user *to, const void *from, unsigned long 
 	}
 	pr_my1("[%s] user space copy\n", __func__);
 
-	ttbr0h_new = ttbr0l_new = 0;
+	ttbr0h_new = 0;
+	ttbr0l_new = (u32)pgd_zero;
 	asm volatile (	"mrrc p15, 0, %0, %1, c2\n"
 			"mcrr p15, 0, %2, %3, c2\n"
 			"isb"
