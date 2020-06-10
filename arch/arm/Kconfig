@@ -1326,6 +1326,15 @@ config PAGE_OFFSET
 	default 0xB0000000 if VMSPLIT_3G_OPT
 	default 0xC0000000
 
+config VMSPLIT_4G_DEV
+	bool "Experimental changes for 4G/4G user/kernel split"
+	depends on ARM_LPAE
+	select UACCESS_GUP_KMAP_MEMCPY
+	help
+	  Experimental changes during 4G/4G user/kernel split development.
+	  Existing vmsplit config option is used, once development is done,
+	  this would be put as a new choice & _DEV suffix removed.
+
 config NR_CPUS
 	int "Maximum number of CPUs (2-32)"
 	range 2 32
