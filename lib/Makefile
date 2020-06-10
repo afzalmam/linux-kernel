@@ -309,3 +309,6 @@ obj-$(CONFIG_OBJAGG) += objagg.o
 
 # KUnit tests
 obj-$(CONFIG_LIST_KUNIT_TEST) += list-test.o
+
+# uaccess
+obj-$(CONFIG_UACCESS_GUP_KMAP_MEMCPY) += uaccess_gup_kmap_memcpy.o
