@@ -96,8 +96,10 @@ EXPORT_SYMBOL(mmiocpy);
 #ifdef CONFIG_MMU
 EXPORT_SYMBOL(copy_page);
 
+#ifndef CONFIG_UACCESS_GUP_KMAP_MEMCPY
 EXPORT_SYMBOL(arm_copy_from_user);
 EXPORT_SYMBOL(arm_copy_to_user);
+#endif
 EXPORT_SYMBOL(arm_clear_user);
 
 EXPORT_SYMBOL(__get_user_1);

@@ -512,6 +512,15 @@ do {									\
 extern unsigned long __must_check
 arm_copy_from_user(void *to, const void __user *from, unsigned long n);
 
+#ifdef CONFIG_UACCESS_GUP_KMAP_MEMCPY
+extern unsigned long __must_check
+gup_kmap_copy_from_user(void *to, const void __user *from, unsigned long n);
+static inline __must_check unsigned long
+raw_copy_from_user(void *to, const void __user *from, unsigned long n)
+{
+	return gup_kmap_copy_from_user(to, from, n);
+}
+#else
 static inline unsigned long __must_check
 raw_copy_from_user(void *to, const void __user *from, unsigned long n)
 {
@@ -522,12 +531,22 @@ raw_copy_from_user(void *to, const void __user *from, unsigned long n)
 	uaccess_restore(__ua_flags);
 	return n;
 }
+#endif
 
 extern unsigned long __must_check
 arm_copy_to_user(void __user *to, const void *from, unsigned long n);
 extern unsigned long __must_check
 __copy_to_user_std(void __user *to, const void *from, unsigned long n);
 
+#ifdef CONFIG_UACCESS_GUP_KMAP_MEMCPY
+extern unsigned long __must_check
+gup_kmap_copy_to_user(void __user *to, const void *from, unsigned long n);
+static inline __must_check unsigned long
+raw_copy_to_user(void __user *to, const void *from, unsigned long n)
+{
+	return gup_kmap_copy_to_user(to, from, n);
+}
+#else
 static inline unsigned long __must_check
 raw_copy_to_user(void __user *to, const void *from, unsigned long n)
 {
@@ -541,6 +560,7 @@ raw_copy_to_user(void __user *to, const void *from, unsigned long n)
 	return arm_copy_to_user(to, from, n);
 #endif
 }
+#endif
 
 extern unsigned long __must_check
 arm_clear_user(void __user *addr, unsigned long n);
