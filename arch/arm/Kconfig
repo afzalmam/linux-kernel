@@ -1328,7 +1328,6 @@ config PAGE_OFFSET
 
 config VMSPLIT_4G_DEV
 	bool "Experimental changes for 4G/4G user/kernel split"
-	depends on ARM_LPAE
 	select UACCESS_GUP_KMAP_MEMCPY
 	help
 	  Experimental changes during 4G/4G user/kernel split development.
